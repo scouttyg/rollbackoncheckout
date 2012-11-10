@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# source rvm and .rvmrc if present
+[ -s "$HOME/.rvm/scripts/rvm" ] && . "$HOME/.rvm/scripts/rvm"
+[ -s "$PWD/.rvmrc" ] && . "$PWD/.rvmrc"
+ 
+# rollback migrations if present
+OLDBRANCH=$1
+NEWBRANCH=$2
+ISBRANCHCHANGE=$3
+
+if [ ISBRANCHCHANGE ]; then
+	AORD=$(git diff --name-status $OLDBRANCH $NEWBRANCH | egrep 'db/migrate' | egrep -m 1 -o '^[A-Z]')
+	if [ "$AORD" = "A" ]; then
+		echo 'Migrating database...'
+		bundle exec rake db:migrate
+	else
+		MIGRATIONS=$(git diff --name-only $OLDBRANCH $NEWBRANCH | egrep '^db/migrate'| wc -l)
+		REVERTFILECOUNT=$(($MIGRATIONS + 1))
+		FILE=$(git ls-tree -r --name-status $OLDBRANCH db/migrate | tail -$REVERTFILECOUNT | head -1 | cut -d'_' -f 1 | cut -d/ -f3)
+		if [ $MIGRATIONS -ne 0 ]; then
+		  echo 'Rolling back migrations...'
+		  echo "bundle exec rake db:migrate VERSION="$FILE
+		  git checkout $OLDBRANCH db/migrate/
+		  bundle exec rake db:migrate VERSION=$FILE
+		  git reset db/migrate/
+		  git clean -f db/migrate -q
+		fi
+	fi
+fi
