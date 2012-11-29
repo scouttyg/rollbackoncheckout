@@ -1,5 +1,8 @@
 A git post-checkout hook that rollsback any DB changes that exist between branches (any non-commited changes will still persist) for Ruby on Rails
 
+You may also want to check out: [https://github.com/tpope/hookup](https://github.com/tpope/hookup)
+
+
 ###Requirements:###
 
 *  Some version of Rails (over version 2.3 tested)
